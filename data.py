@@ -1,6 +1,7 @@
 import pandas, json
 import numpy as np
 from matplotlib import pyplot, axes
+from matplotlib import dates as mdates
 from mplfinance.original_flavor import candlestick_ochl
 import pandas_datareader.data as data
 import datetime
@@ -10,7 +11,7 @@ class Stock():
         self.ticker = ticker
     
     def getData(self):
-        start = datetime.date.today() - datetime.timedelta(days=90)
+        start = datetime.date.today() - datetime.timedelta(days=120)
         end = datetime.date.today()
             
         # dataframe object
@@ -18,7 +19,7 @@ class Stock():
         df.index.to_pydatetime()
         return df
 
-def inc_dec(c, o):
+    def inc_dec(self, c, o):
         if c > o:
             value = "Increase"
         elif c < o:
@@ -26,39 +27,40 @@ def inc_dec(c, o):
         else:
             value = "Equal"
         return value
+    
+    def getGraph(self, df):
+        
+        df["Status"] = [self.inc_dec(c, o) for c, o in zip(df.Close, df.Open)]
+        df["Middle"] = (df.Open + df.Close) / 2
+        df["Daily Change"] = abs(df.Close - df.Open)
+        date = df.index.values
+        openprice = df['Open']
+        closeprice = df['Close']
+        high = df['High']
+        low = df['Low']
 
+        ## Get data for candlestick_ochl() ##
+        x = 0
+        y = len(date)
+        data = []
+        while x < y:
+            append_me = date[x], openprice[x], closeprice[x], high[x], low[x]
+            data.append(append_me)
+            x += 1
+        
+        ## Plot Candlesticks ##
+        fig = pyplot.figure(figsize=(10, 7))
+        ax1 = pyplot.subplot()
+        candlestick_ochl(ax1, data, width=np.timedelta64(12, 'h'), colorup='green', colordown='red', alpha=0.75)
+        # pyplot.plot(date, high, 'go', date, low, 'ro')
+        pyplot.yticks(np.arange(min(closeprice)-(0.1*min(closeprice)), max(closeprice)+(0.1*max(closeprice)),  50))
+        pyplot.ylabel('Price')
+        ax1.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d-%Y'))
+        pyplot.xticks(rotation=45)
+        pyplot.xlabel('Date')
+        pyplot.show()
+        
+        
 tesla = Stock('TSLA')
-stockData = tesla.getData()
-
-stockData["Status"] = [inc_dec(c, o) for c, o in zip(stockData.Close, stockData.Open)]
-stockData["Middle"] = (stockData.Open + stockData.Close) / 2
-stockData["Daily Change"] = abs(stockData.Close - stockData.Open)
-date = stockData.index.values
-openprice = stockData['Open']
-closeprice = stockData['Close']
-high = stockData['High']
-low = stockData['Low']
-
-x = 0
-y = len(date)
-data = []
-while x < y:
-    append_me = date[x], openprice[x], closeprice[x], high[x], low[x]
-    data.append(append_me)
-    print(date[x])
-    x += 1
-
-myplot = pyplot.figure()
-ax1 = pyplot.subplot()
-# ([x], [y])
-# t = numpy.arange(0., 5., 0.2)
-candlestick_ochl(ax1, data, width=np.timedelta64(12, 'h'), colorup='green', colordown='red', alpha=0.75)
-# pyplot.plot(date, high, 'g-', date, low, 'r-')
-pyplot.yticks(np.arange(min(closeprice)-(0.1*min(closeprice)), max(closeprice)+(0.1*max(closeprice)),  50))
-pyplot.xticks(rotation=45)
-pyplot.xlabel('Date')
-pyplot.ylabel('Price')
-pyplot.show()
-
-
-
+data = tesla.getData()
+tesla.getGraph(data)
